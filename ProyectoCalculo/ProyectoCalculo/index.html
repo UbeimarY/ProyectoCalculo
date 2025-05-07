@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Visualizador de Superficies 3D</title>
+  <link rel="stylesheet" href="style.css"/>
+
+  <!-- Librerías necesarias -->
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/10.6.4/math.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+    }
+
+    .input-section {
+      margin-bottom: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .input-section label {
+      font-weight: bold;
+    }
+
+    .input-section select,
+    .input-section input,
+    #btnGraficar {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+
+    #btnGraficar {
+      background-color: #4CAF50;
+      color: white;
+      font-weight: bold;
+      border: none;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    #btnGraficar:hover {
+      background-color: #45a049;
+    }
+
+    #btnExtremos {
+      padding: 10px;
+      font-size: 16px;
+      background-color: #2196F3;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #btnExtremos:hover {
+      background-color: #0b7dda;
+    }
+
+    #grafico3d {
+      width: 100%;
+      height: 400px;
+      border: 1px solid #ddd;
+      margin: 20px 0;
+    }
+
+    .resultados {
+      margin-top: 20px;
+    }
+
+    .resultados p {
+      font-size: 16px;
+      margin: 5px 0;
+    }
+
+    .puntos-extremos {
+      margin-top: 20px;
+    }
+
+    .puntos-extremos ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .puntos-extremos li {
+      background: #f9f9f9;
+      margin: 5px 0;
+      padding: 8px;
+      border-left: 4px solid #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Visualizador de Superficies 3D</h1>
+    <button id="btnTema" class="btn btn-sm btn-secondary">🌗 Tema</button>
+    
+    <div class="input-section">
+      <label for="funcion">Selecciona o escribe f(x, y):</label>
+      <select id="ejemplos">
+        <option value="sin(x) * cos(y)">sin(x) * cos(y)</option>
+        <option value="x^2 + y^2">x^2 + y^2</option>
+        <option value="x^2 - y^2">x^2 - y^2</option>
+        <option value="exp(-x^2 - y^2)">exp(-x^2 - y^2)</option>
+        <option value="sqrt(x^2 + y^2)">sqrt(x^2 + y^2)</option>
+        <option value="sin(sqrt(x^2 + y^2))">sin(sqrt(x^2 + y^2))</option>
+      </select>
+      <input type="text" id="funcion" placeholder="Ej: sin(x) * cos(y)" value="sin(x) * cos(y)" />
+      <button id="btnGraficar">Graficar</button>
+    </div>
+
+    <button id="btnExtremos">Mostrar Máximos y Mínimos</button>
+
+    <div id="grafico3d"></div>
+
+    <div class="resultados">
+      <h3>Derivadas Parciales:</h3>
+      <p id="derivada-x"></p>
+      <p id="derivada-y"></p>
+    </div>
+
+    <div class="puntos-extremos">
+      <h3>Puntos Críticos:</h3>
+      <ul id="lista-extremos"></ul>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
