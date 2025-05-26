@@ -1,6 +1,6 @@
 let scene, camera, renderer, controls;
 let mesh;
-let puntosMaximos = [], puntosMinimos = [];
+let puntosCriticos = []; 
 let puntoMasAlto = null, puntoMasBajo = null;
 let fondoOscuro = false;
 let ejes;
@@ -58,6 +58,23 @@ function agregarEjes() {
   scene.add(ejes);
 }
 
+function limpiarPuntosAnteriores() {
+
+  puntosCriticos.forEach(punto => {
+    scene.remove(punto.mesh);
+  });
+  puntosCriticos = [];
+  
+
+  if (puntoMasAlto) scene.remove(puntoMasAlto);
+  if (puntoMasBajo) scene.remove(puntoMasBajo);
+  puntoMasAlto = null;
+  puntoMasBajo = null;
+  
+
+  listaExtremos.innerHTML = "";
+}
+
 function animate() {
   requestAnimationFrame(animate);
   controls.update();
@@ -65,17 +82,10 @@ function animate() {
 }
 
 function graficarFuncion() {
+  limpiarPuntosAnteriores(); 
+  
   const funcionStr = funcionInput.value;
   if (mesh) scene.remove(mesh);
-  puntosMaximos.forEach(p => scene.remove(p));
-  puntosMinimos.forEach(p => scene.remove(p));
-  if (puntoMasAlto) scene.remove(puntoMasAlto);
-  if (puntoMasBajo) scene.remove(puntoMasBajo);
-  puntosMaximos = [];
-  puntosMinimos = [];
-  puntoMasAlto = null;
-  puntoMasBajo = null;
-  listaExtremos.innerHTML = "";
 
   try {
     const f = math.compile(funcionStr);
@@ -128,10 +138,23 @@ function graficarFuncion() {
 }
 
 function buscarExtremos() {
+  limpiarPuntosAnteriores(); 
+  
   const funcionStr = funcionInput.value;
   const f = math.compile(funcionStr);
-  const df_dx = math.compile(math.derivative(funcionStr, 'x').toString());
-  const df_dy = math.compile(math.derivative(funcionStr, 'y').toString());
+  
+  const df_dx = math.derivative(funcionStr, 'x');
+  const df_dy = math.derivative(funcionStr, 'y');
+  
+  const d2f_dx2 = math.derivative(df_dx.toString(), 'x');
+  const d2f_dy2 = math.derivative(df_dy.toString(), 'y');
+  const d2f_dxdy = math.derivative(df_dx.toString(), 'y');
+  
+  const fx = math.compile(df_dx.toString());
+  const fy = math.compile(df_dy.toString());
+  const fxx = math.compile(d2f_dx2.toString());
+  const fyy = math.compile(d2f_dy2.toString());
+  const fxy = math.compile(d2f_dxdy.toString());
 
   let zMax = -Infinity, zMin = Infinity;
   let puntoMaximo = null, puntoMinimo = null;
@@ -141,56 +164,69 @@ function buscarExtremos() {
 
   for (let x = -size; x <= size; x += step) {
     for (let y = -size; y <= size; y += step) {
-      const dfx = df_dx.evaluate({ x, y });
-      const dfy = df_dy.evaluate({ x, y });
+      const dfx = fx.evaluate({ x, y });
+      const dfy = fy.evaluate({ x, y });
 
       if (Math.abs(dfx) < 0.5 && Math.abs(dfy) < 0.5) {
         const z = f.evaluate({ x, y });
+        
+        const fxx_val = fxx.evaluate({ x, y });
+        const fyy_val = fyy.evaluate({ x, y });
+        const fxy_val = fxy.evaluate({ x, y });
+        const D = fxx_val * fyy_val - Math.pow(fxy_val, 2);
+
+        let tipo, color;
+        if (D > 0 && fxx_val > 0) {
+          tipo = "Mínimo local";
+          color = 0x0000ff;
+        } else if (D > 0 && fxx_val < 0) {
+          tipo = "Máximo local";
+          color = 0xff0000;
+        } else if (D < 0) {
+          tipo = "Punto de silla";
+          color = 0x00ff00;
+        } else {
+          tipo = "Indeterminado";
+          color = 0xffff00;
+        }
 
         const sphereGeometry = new THREE.SphereGeometry(0.2, 16, 16);
-        const color = z > 0 ? 0xff0000 : 0x0000ff;
         const sphereMaterial = new THREE.MeshStandardMaterial({ color });
         const punto = new THREE.Mesh(sphereGeometry, sphereMaterial);
         punto.position.set(x, y, z);
         scene.add(punto);
 
-        const tipo = z > 0 ? "Máximo" : "Mínimo";
-        listaExtremos.innerHTML += `<li>${tipo} aproximado en (x=${x}, y=${y}, z=${z.toFixed(2)})</li>`;
-
-        if (z > 0) puntosMaximos.push(punto);
-        else puntosMinimos.push(punto);
-
+        puntosCriticos.push({ mesh: punto, x, y, z, tipo });
+        listaExtremos.innerHTML += `<li>${tipo} en (x=${x}, y=${y}, z=${z.toFixed(2)})</li>`;
 
         if (z > zMax) {
           zMax = z;
-          puntoMaximo = { x, y, z };
+          puntoMaximo = { x, y, z, tipo: "Máximo global" };
         }
         if (z < zMin) {
           zMin = z;
-          puntoMinimo = { x, y, z };
+          puntoMinimo = { x, y, z, tipo: "Mínimo global" };
         }
       }
     }
   }
 
-
   if (puntoMaximo) {
     const sphereGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ff00 }); 
+    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xff00ff });
     puntoMasAlto = new THREE.Mesh(sphereGeometry, sphereMaterial);
     puntoMasAlto.position.set(puntoMaximo.x, puntoMaximo.y, puntoMaximo.z);
     scene.add(puntoMasAlto);
-    listaExtremos.innerHTML += `<li><strong>Máximo global</strong> en (x=${puntoMaximo.x}, y=${puntoMaximo.y}, z=${puntoMaximo.z.toFixed(2)})</li>`;
+    listaExtremos.innerHTML += `<li><strong>${puntoMaximo.tipo}</strong> en (x=${puntoMaximo.x}, y=${puntoMaximo.y}, z=${puntoMaximo.z.toFixed(2)})</li>`;
   }
-
 
   if (puntoMinimo) {
     const sphereGeometry = new THREE.SphereGeometry(0.3, 16, 16);
-    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0xffff00 }); 
+    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 0x00ffff });
     puntoMasBajo = new THREE.Mesh(sphereGeometry, sphereMaterial);
     puntoMasBajo.position.set(puntoMinimo.x, puntoMinimo.y, puntoMinimo.z);
     scene.add(puntoMasBajo);
-    listaExtremos.innerHTML += `<li><strong>Mínimo global</strong> en (x=${puntoMinimo.x}, y=${puntoMinimo.y}, z=${puntoMinimo.z.toFixed(2)})</li>`;
+    listaExtremos.innerHTML += `<li><strong>${puntoMinimo.tipo}</strong> en (x=${puntoMinimo.x}, y=${puntoMinimo.y}, z=${puntoMinimo.z.toFixed(2)})</li>`;
   }
 }
 
